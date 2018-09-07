@@ -8,73 +8,7 @@
 
 'use strict';
 
-function PeerConnectionAdapter(ice_config, constraints) {
-  var RTCPeerConnection = navigator.mozGetUserMedia
-    ? mozRTCPeerConnection : webkitRTCPeerConnection;
-  this.peerconnection = new RTCPeerConnection(ice_config, constraints);
-  this.interop = new require('sdp-interop').Interop();
-}
-
-PeerConnectionAdapter.prototype.setLocalDescription
-  = function (description, successCallback, failureCallback) {
-  // if we're running on FF, transform to Unified Plan first.
-  if (navigator.mozGetUserMedia)
-    description = this.interop.toUnifiedPlan(description);
-
-  var self = this;
-  this.peerconnection.setLocalDescription(description,
-    function () { successCallback(); },
-    function (err) { failureCallback(err); }
-  );
-};
-
-PeerConnectionAdapter.prototype.setRemoteDescription
-  = function (description, successCallback, failureCallback) {
-  // if we're running on FF, transform to Unified Plan first.
-  if (navigator.mozGetUserMedia)
-    description = this.interop.toUnifiedPlan(description);
-
-  var self = this;
-  this.peerconnection.setRemoteDescription(description,
-    function () { successCallback(); },
-    function (err) { failureCallback(err); }
-  );
-};
-
-PeerConnectionAdapter.prototype.createAnswer
-  = function (successCallback, failureCallback, constraints) {
-  var self = this;
-  this.peerconnection.createAnswer(
-    function (answer) {
-      if (navigator.mozGetUserMedia)
-        answer = self.interop.toPlanB(answer);
-      successCallback(answer);
-    },
-    function(err) {
-      failureCallback(err);
-    },
-    constraints
-  );
-
-};
-
-PeerConnectionAdapter.prototype.createOffer
-  = function (successCallback, failureCallback, constraints) {
-  var self = this;
-  this.peerconnection.createOffer(
-    function (offer) {
-      if (navigator.mozGetUserMedia)
-        offer = self.interop.toPlanB(offer);
-      successCallback(offer);
-    },
-    function(err) {
-      failureCallback(err);
-    },
-    constraints
-  );
-
-};
-
+import PeerConnectionAdapter from './lib/PeerconnectionAdapter';
 
 var getMediaButton = document.querySelector('button#getMedia');
 var createPeerConnectionButton = document.querySelector('button#createPeerConnection');
@@ -85,7 +19,7 @@ var setAnswerButton = document.querySelector('button#setAnswer');
 var hangupButton = document.querySelector('button#hangup');
 var dataChannelDataReceived;
 
-getMediaButton.onclick = getMedia;
+getMediaButton.onclick = getMedia2;
 createPeerConnectionButton.onclick = loginAndConnect;
 createOfferButton.onclick = createOffer;
 setOfferButton.onclick = setOffer;
@@ -254,8 +188,7 @@ function gotStream(stream) {
   trace('Received local stream');
   localVideo.srcObject = stream;
   localStream = stream;
-  // createPeerConnectionButton.click();
-  getMedia2();
+  createPeerConnectionButton.click();
 }
 
 var localVideoSender;
@@ -345,10 +278,12 @@ function onOffer(sdp, name) {
     type: 'offer',
     sdp: sdp
   };
-  localPeerConnection.setRemoteDescription(offer).then(
-    onSetSessionDescriptionSuccess,
-    onSetSessionDescriptionError
-  );
+  // localPeerConnection.setRemoteDescription(offer).then(
+  //   onSetSessionDescriptionSuccess,
+  //   onSetSessionDescriptionError
+  // );
+  localPeerConnection.setRemoteDescription(offer, onSetSessionDescriptionSuccess, onSetSessionDescriptionError);
+
   offerSdpTextarea.value = sdp;
   offerSdpTextarea.disabled = true;
   createOfferButton.disabled = true;
@@ -362,10 +297,11 @@ function onAnswer(sdp) {
     type: 'answer',
     sdp: sdp
   };
-  localPeerConnection.setRemoteDescription(answer).then(
-    onSetSessionDescriptionSuccess,
-    onSetSessionDescriptionError
-  );
+  // localPeerConnection.setRemoteDescription(answer).then(
+  //   onSetSessionDescriptionSuccess,
+  //   onSetSessionDescriptionError
+  // );
+  localPeerConnection.setRemoteDescription(answer, onSetSessionDescriptionSuccess, onSetSessionDescriptionError);
   answerSdpTextarea.value = sdp;
   answerSdpTextarea.disabled = true;
   createAnswerButton.disabled = true;
@@ -375,7 +311,7 @@ function onAnswer(sdp) {
 function onCandidate(candidate) {
   console.log("on candidate ", candidate);
   if (candidate) {
-    localPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    localPeerConnection.peerconnection.addIceCandidate(new RTCIceCandidate(candidate));
   }
 }
 
@@ -392,22 +328,36 @@ function createPeerConnection() {
   setAnswerButton.disabled = false;
   hangupButton.disabled = false;
   trace('Starting call');
-  var videoTracks = localStream.getVideoTracks();
-  var audioTracks = localStream.getAudioTracks();
-  if (videoTracks.length > 0) {
-    trace('Using video device: ' + videoTracks[0].label);
+
+  if(localStream){
+    var videoTracks = localStream.getVideoTracks();
+    var audioTracks = localStream.getAudioTracks();
+    if (videoTracks.length > 0) {
+      trace('Using video device: ' + videoTracks[0].label);
+    }
+    if (audioTracks.length > 0) {
+      trace('Using audio device: ' + audioTracks[0].label);
+    }
   }
-  if (audioTracks.length > 0) {
-    trace('Using audio device: ' + audioTracks[0].label);
+  if(localStream2){
+    var videoTracks = localStream2.getVideoTracks();
+    var audioTracks = localStream2.getAudioTracks();
+    if (videoTracks.length > 0) {
+      trace('Using video device: ' + videoTracks[0].label);
+    }
+    if (audioTracks.length > 0) {
+      trace('Using audio device: ' + audioTracks[0].label);
+    }
   }
 
-  // var servers = {
-  //   sdpSemantics: "unified-plan"
-  // };
-  var servers = null;
+  var servers = {
+    sdpSemantics: "unified-plan"
+  };
+  // var servers = null;
 
   localPeerConnection = new PeerConnectionAdapter(servers);
-  trace('Created local peer connection object localPeerConnection');
+  trace('Created local peer connection object localPeerConnection', localPeerConnection);
+  console.log('Created local peer connection object localPeerConnection', localPeerConnection);
   localPeerConnection.peerconnection.onicecandidate = function (e) {
     var candidate = {
       type: 'candidate',
@@ -428,30 +378,34 @@ function createPeerConnection() {
   localPeerConnection.peerconnection.ondatachannel = receiveChannelCallback;
 
   if (getMediaButton.disabled == true) {
-    localStream.getTracks().forEach(
-      function (track) {
-        var sender = localPeerConnection.peerconnection.addTrack(
-          track,
-          localStream
-        );
-        if ('video' == sender.track.kind) {
-          localVideoSender = sender;
+    if(localStream){
+      localStream.getTracks().forEach(
+        function (track) {
+          var sender = localPeerConnection.peerconnection.addTrack(
+            track,
+            localStream
+          );
+          if ('video' == sender.track.kind) {
+            localVideoSender = sender;
+          }
         }
-      }
-    );
-    trace('Adding Local Stream to peer connection');
-    localStream2.getTracks().forEach(
-      function (track) {
-        var sender = localPeerConnection.peerconnection.addTrack(
-          track,
-          localStream2
-        );
-        if ('video' == sender.track.kind) {
-          localVideoSender = sender;
+      );
+      trace('Adding Local Stream to peer connection');
+    }
+    if(localStream2){
+      localStream2.getTracks().forEach(
+        function (track) {
+          var sender = localPeerConnection.peerconnection.addTrack(
+            track,
+            localStream2
+          );
+          if ('video' == sender.track.kind) {
+            localVideoSender = sender;
+          }
         }
-      }
-    );
-    trace('Adding Local Stream2 to peer connection');
+      );
+      trace('Adding Local Stream2 to peer connection');
+    }
   }
 
   if(localEndpointInput.value.indexOf('A') > -1){
@@ -477,11 +431,16 @@ function maybeAddLineBreakToEnd(sdp) {
 }
 
 function createOffer() {
+  // localPeerConnection.createOffer(
+  //   offerOptions
+  // ).then(
+  //   gotDescription1,
+  //   onCreateSessionDescriptionError
+  // );
   localPeerConnection.createOffer(
-    offerOptions
-  ).then(
     gotDescription1,
-    onCreateSessionDescriptionError
+    onCreateSessionDescriptionError,
+    offerOptions
   );
   createOfferButton.disabled = true;
 }
@@ -498,7 +457,12 @@ function setOffer() {
     type: 'offer',
     sdp: sdp
   };
-  localPeerConnection.setLocalDescription(offer).then(
+  // localPeerConnection.setLocalDescription(offer).then(
+  //   onSetSessionDescriptionSuccess,
+  //   onSetSessionDescriptionError
+  // );
+  localPeerConnection.setLocalDescription(
+    offer,
     onSetSessionDescriptionSuccess,
     onSetSessionDescriptionError
   );
@@ -514,7 +478,11 @@ function gotDescription1(description) {
 }
 
 function createAnswer() {
-  localPeerConnection.createAnswer().then(
+  // localPeerConnection.createAnswer().then(
+  //   gotDescription2,
+  //   onCreateSessionDescriptionError
+  // );
+  localPeerConnection.createAnswer(
     gotDescription2,
     onCreateSessionDescriptionError
   );
@@ -529,7 +497,12 @@ function setAnswer() {
     type: 'answer',
     sdp: sdp
   };
-  localPeerConnection.setLocalDescription(answer).then(
+  // localPeerConnection.setLocalDescription(answer).then(
+  //   onSetSessionDescriptionSuccess,
+  //   onSetSessionDescriptionError
+  // );
+  localPeerConnection.setLocalDescription(
+    answer,
     onSetSessionDescriptionSuccess,
     onSetSessionDescriptionError
   );
