@@ -8,6 +8,10 @@
 
 'use strict';
 
+/**
+ * Crate answer on client A
+ */
+
 import PeerConnectionAdapter from './lib/PeerconnectionAdapter';
 
 var getMediaButton = document.querySelector('button#getMedia');
@@ -61,6 +65,10 @@ var offerOptions = {
   offerToReceiveVideo: 1
 };
 
+var selectedDevice = '08005f695ee18b8845f37e991bfeb05a980f79102d7895da4c984b05e03633bc';
+// var selectedDevice = '04d27eb16e87e5cc918ccbfa292f96c161320514c4dcff14d096521a28f942e2';
+
+
 getSources();
 
 function getSources() {
@@ -109,9 +117,9 @@ function getMedia2(aa, widthss, heightss, callback) {
       track.stop();
     });
   }
-  var audioSource = audioSelect.value;
+  var audioSource = audioSelect.value = selectedDevice;
   trace('Selected audio source: ' + audioSource);
-  var videoSource = '04d27eb16e87e5cc918ccbfa292f96c161320514c4dcff14d096521a28f942e2';
+  var videoSource = videoSelect.value = selectedDevice;
   trace('Selected video source: ' + videoSource);
   if (widthss == null) {
     widthss = 320;
@@ -122,7 +130,7 @@ function getMedia2(aa, widthss, heightss, callback) {
   var constraints = {
     audio: {
       optional: [{
-        sourceId: videoSource
+        sourceId: audioSource
       }],
     },
     video: {width: {exact: widthss}, height: {exact: heightss}, deviceId: videoSource}
@@ -148,9 +156,9 @@ function getMedia(aa, widthss, heightss, callback) {
       track.stop();
     });
   }
-  var audioSource = audioSelect.value;
+  var audioSource = audioSelect.value = selectedDevice;
   trace('Selected audio source: ' + audioSource);
-  var videoSource = '08005f695ee18b8845f37e991bfeb05a980f79102d7895da4c984b05e03633bc';
+  var videoSource = videoSelect.value = selectedDevice;
   trace('Selected video source: ' + videoSource);
   if (widthss == null) {
     widthss = 1280;
@@ -161,7 +169,7 @@ function getMedia(aa, widthss, heightss, callback) {
   var constraints = {
     audio: {
       optional: [{
-        sourceId: videoSource
+        sourceId: audioSource
       }],
     },
     video: {width: {exact: widthss}, height: {exact: heightss}, deviceId: videoSource}
@@ -188,7 +196,8 @@ function gotStream(stream) {
   trace('Received local stream');
   localVideo.srcObject = stream;
   localStream = stream;
-  createPeerConnectionButton.click();
+  // createPeerConnectionButton.click();
+  getMedia2();
 }
 
 var localVideoSender;
@@ -311,7 +320,11 @@ function onAnswer(sdp) {
 function onCandidate(candidate) {
   console.log("on candidate ", candidate);
   if (candidate) {
-    localPeerConnection.peerconnection.addIceCandidate(new RTCIceCandidate(candidate));
+    localPeerConnection.peerconnection.addIceCandidate(new RTCIceCandidate(candidate)).then(success=>{
+      onAddIceCandidateSuccess(success);
+    }).catch(error=>{
+      onAddIceCandidateError(error);
+    });
   }
 }
 
@@ -350,10 +363,10 @@ function createPeerConnection() {
     }
   }
 
-  // var servers = {
-  //   sdpSemantics: "unified-plan"
-  // };
-  var servers = null;
+  var servers = {
+    sdpSemantics: "unified-plan",
+    iceServers: [{"urls": "stun:124.202.164.3"}]
+  };
 
   localPeerConnection = new PeerConnectionAdapter(servers);
   trace('Created local peer connection object localPeerConnection', localPeerConnection);
@@ -474,6 +487,7 @@ function setOffer() {
 function gotDescription1(description) {
   offerSdpTextarea.disabled = false;
   offerSdpTextarea.value = description.sdp;
+  trace('on create offer success, \n', description.sdp);
   setOfferButton.click();
 }
 
@@ -514,6 +528,7 @@ function setAnswer() {
 function gotDescription2(description) {
   answerSdpTextarea.disabled = false;
   answerSdpTextarea.value = description.sdp;
+  trace('on create answer success: \n', description.sdp);
   setAnswerButton.click();
 }
 
@@ -561,29 +576,6 @@ function gotRemoteStream(e) {
     }
   }
   trace('Received remote stream');
-}
-
-function getOtherPc(pc) {
-  return localPeerConnection;
-}
-
-function getName(pc) {
-  return (pc === localPeerConnection) ? 'localPeerConnection' :
-    'remotePeerConnection';
-}
-
-function onIceCandidate(pc, event) {
-  getOtherPc(pc).addIceCandidate(event.candidate)
-    .then(
-      function () {
-        onAddIceCandidateSuccess(pc);
-      },
-      function (err) {
-        onAddIceCandidateError(pc, err);
-      }
-    );
-  trace(getName(pc) + ' ICE candidate: \n' + (event.candidate ?
-    event.candidate.candidate : '(null)'));
 }
 
 function onAddIceCandidateSuccess() {
