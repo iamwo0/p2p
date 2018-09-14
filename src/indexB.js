@@ -23,7 +23,7 @@ var setAnswerButton = document.querySelector('button#setAnswer');
 var hangupButton = document.querySelector('button#hangup');
 var dataChannelDataReceived;
 
-getMediaButton.onclick = getMedia;
+getMediaButton.onclick = getMedia2;
 createPeerConnectionButton.onclick = loginAndConnect;
 createOfferButton.onclick = createOffer;
 setOfferButton.onclick = setOffer;
@@ -61,6 +61,11 @@ var dataChannelOptions = {
 var dataChannelCounter = 0;
 var sendDataLoop;
 var offerOptions = {
+  offerToReceiveAudio: 1,
+  offerToReceiveVideo: 1
+};
+
+var answerOptions = {
   offerToReceiveAudio: 1,
   offerToReceiveVideo: 1
 };
@@ -189,7 +194,7 @@ function gotStream2(stream) {
   trace('Received local stream');
   localVideo2.srcObject = stream;
   localStream2 = stream;
-  createPeerConnectionButton.click();
+  // createPeerConnectionButton.click();
 }
 
 function gotStream(stream) {
@@ -297,7 +302,7 @@ function onOffer(sdp, name) {
   offerSdpTextarea.disabled = true;
   createOfferButton.disabled = true;
   setOfferButton.disabled = true;
-  createAnswerButton.click();
+  // createAnswerButton.click();
 }
 
 function onAnswer(sdp) {
@@ -320,11 +325,12 @@ function onAnswer(sdp) {
 function onCandidate(candidate) {
   console.log("on candidate ", candidate);
   if (candidate) {
-    localPeerConnection.peerconnection.addIceCandidate(new RTCIceCandidate(candidate)).then(success=>{
-      onAddIceCandidateSuccess(success);
-    }).catch(error=>{
-      onAddIceCandidateError(error);
-    });
+    // localPeerConnection.peerconnection.addIceCandidate(new RTCIceCandidate(candidate)).then(success=>{
+    //   onAddIceCandidateSuccess(success);
+    // }).catch(error=>{
+    //   onAddIceCandidateError(error);
+    // });
+    localPeerConnection.addIceCandidate(candidate, onAddIceCandidateSuccess, onAddIceCandidateError);
   }
 }
 
@@ -364,20 +370,29 @@ function createPeerConnection() {
   }
 
   var servers = {
-    sdpSemantics: "unified-plan",
+    // sdpSemantics: "unified-plan",
+    sdpSemantics: "plan-b",
     iceServers: [{"urls": "stun:124.202.164.3"}]
   };
 
   localPeerConnection = new PeerConnectionAdapter(servers);
   trace('Created local peer connection object localPeerConnection', localPeerConnection);
   console.log('Created local peer connection object localPeerConnection', localPeerConnection);
-  localPeerConnection.peerconnection.onicecandidate = function (e) {
-    var candidate = {
+  // localPeerConnection.peerconnection.onicecandidate = function (e) {
+  //   var candidate = {
+  //     type: 'candidate',
+  //     sdp: e.candidate
+  //   };
+  //   doSend(candidate, true);
+  // };
+  localPeerConnection.onicecandidate(candidateSdp=>{
+    let candidate = {
       type: 'candidate',
-      sdp: e.candidate
-    };
+      sdp: candidateSdp
+    }
+    console.log('send candidate from A', candidate);
     doSend(candidate, true);
-  };
+  });
   if (RTCPeerConnection.prototype.createDataChannel) {
     sendChannel = localPeerConnection.peerconnection.createDataChannel('sendDataChannel',
       dataChannelOptions);
@@ -488,7 +503,7 @@ function gotDescription1(description) {
   offerSdpTextarea.disabled = false;
   offerSdpTextarea.value = description.sdp;
   trace('on create offer success, \n', description.sdp);
-  setOfferButton.click();
+  // setOfferButton.click();
 }
 
 function createAnswer() {
@@ -498,7 +513,8 @@ function createAnswer() {
   // );
   localPeerConnection.createAnswer(
     gotDescription2,
-    onCreateSessionDescriptionError
+    onCreateSessionDescriptionError,
+    answerOptions
   );
   createAnswerButton.disabled = true;
 }
@@ -529,7 +545,7 @@ function gotDescription2(description) {
   answerSdpTextarea.disabled = false;
   answerSdpTextarea.value = description.sdp;
   trace('on create answer success: \n', description.sdp);
-  setAnswerButton.click();
+  // setAnswerButton.click();
 }
 
 function sendData() {
@@ -603,7 +619,7 @@ function onSendChannelStateChange() {
   var readyState = sendChannel.readyState;
   trace('Send channel state is: ' + readyState);
   if (readyState === 'open') {
-    sendDataLoop = setInterval(sendData, 1000);
+    sendDataLoop = setInterval(sendData, 10000);
   } else {
     clearInterval(sendDataLoop);
   }

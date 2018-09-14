@@ -46,10 +46,6 @@ PeerConnectionAdapter.prototype.setLocalDescription
   else
     description = self.interop.toPlanB(description);
   console.log('set local description after: \n', description.sdp);
-  // this.peerconnection.setLocalDescription(description,
-  //   function () { successCallback(); },
-  //   function (err) { failureCallback(err); }
-  // );
   self.peerconnection.setLocalDescription(description).then(success=>{
     console.log('on set local description success: ', success);
     if(successCallback && typeof successCallback == 'function')
@@ -77,10 +73,6 @@ PeerConnectionAdapter.prototype.setRemoteDescription
   else
     description = self.interop.toPlanB(description);
   console.log('set remote description after: \n', description.sdp);
-  // this.peerconnection.setRemoteDescription(description,
-  //   function () { successCallback(); },
-  //   function (err) { failureCallback(err); }
-  // );
   self.peerconnection.setRemoteDescription(description).then(success=>{
     console.log('on set remote description success: ', success);
     if(successCallback && typeof successCallback == 'function')
@@ -101,24 +93,10 @@ PeerConnectionAdapter.prototype.setRemoteDescription
 PeerConnectionAdapter.prototype.createAnswer
   = function (successCallback, failureCallback, constraints) {
   var self = this;
-  // this.peerconnection.createAnswer(
-  //   function (answer) {
-  //     console.log('create answer before: \n', answer);
-  //     if (navigator.mozGetUserMedia || !self.useUnified)
-  //       answer = self.interop.toPlanB(answer);
-  //     console.log('create answer after: \n', answer);
-  //     successCallback(answer);
-  //   },
-  //   function(err) {
-  //     failureCallback(err);
-  //   },
-  //   constraints
-  // );
   self.peerconnection.createAnswer(constraints).then(answer=>{
     console.log('on create answer success: ', answer.sdp);
-    if (navigator.mozGetUserMedia || !self.useUnified)
-      answer = self.interop.toPlanB(answer);
-    console.log('on create answer after plan B: \n', answer.sdp);
+    // if (navigator.mozGetUserMedia || !self.useUnified)
+    //   answer = self.interop.toPlanB(answer);
     if(successCallback && typeof successCallback == 'function')
       successCallback(answer);
   }).catch(error=>{
@@ -138,24 +116,10 @@ PeerConnectionAdapter.prototype.createAnswer
 PeerConnectionAdapter.prototype.createOffer
   = function (successCallback, failureCallback, constraints) {
   var self = this;
-  // this.peerconnection.createOffer(
-  //   function (offer) {
-  //     console.log('create offer before: \n', offer);
-  //     if (navigator.mozGetUserMedia || !self.useUnified)
-  //       offer = self.interop.toPlanB(offer);
-  //     console.log('create offer after: \n', offer);
-  //     successCallback(offer);
-  //   },
-  //   function(err) {
-  //     failureCallback(err);
-  //   },
-  //   constraints
-  // );
   self.peerconnection.createOffer(constraints).then(offer=>{
     console.log('on create offer success: ', offer.sdp);
-    if (navigator.mozGetUserMedia || !self.useUnified)
-      offer = self.interop.toPlanB(offer);
-    console.log('on create offer after to plan B: \n', offer.sdp);
+    // if (navigator.mozGetUserMedia || !self.useUnified)
+    //   offer = self.interop.toPlanB(offer);
     if(successCallback && typeof successCallback == 'function')
       successCallback(offer);
   }).catch(error=>{
@@ -164,6 +128,52 @@ PeerConnectionAdapter.prototype.createOffer
       failureCallback(error);
   });
 
+};
+
+
+/**
+ * 
+ * @param {String} candidate 
+ * @param {Function} successCallback 
+ * @param {Function} failureCallback 
+ */
+PeerConnectionAdapter.prototype.addIceCandidate
+  = function (candidate, successCallback, failureCallback) {
+  var self = this;
+  console.log('on candidate will set', candidate);
+  // if(navigator.mozGetUserMedia || self.useUnified)
+  //   candidate = self.interop.candidateToUnifiedPlan(candidate);
+  // else
+  //   candidate = self.interop.candidateToPlanB(candidate);
+  self.peerconnection.addIceCandidate(candidate).then(success=>{
+    if(successCallback && typeof successCallback == 'function')
+      successCallback(success);
+  }).catch(error=>{
+    if(failureCallback && typeof failureCallback == 'function')
+      failureCallback(error);
+  });
+};
+
+
+/**
+ * 
+ * @param {Function} callback 
+ */
+PeerConnectionAdapter.prototype.onicecandidate
+  = function (callback) {
+  var self = this;
+  self.peerconnection.onicecandidate = function(event) {
+    let candidate = event.candidate;
+    if (candidate) {
+      console.log('on candidate from local:', candidate);
+      if(callback && typeof callback == 'function')
+        callback(candidate);
+    } else {
+      // All ICE candidates have been sent
+      console.info('All ICE candidates have been sent ');
+    }
+  }
+  
 };
 
 
