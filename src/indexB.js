@@ -70,8 +70,8 @@ var answerOptions = {
   offerToReceiveVideo: 1
 };
 
-var selectedDevice = '08005f695ee18b8845f37e991bfeb05a980f79102d7895da4c984b05e03633bc';
-// var selectedDevice = '04d27eb16e87e5cc918ccbfa292f96c161320514c4dcff14d096521a28f942e2';
+// var selectedDevice = '08005f695ee18b8845f37e991bfeb05a980f79102d7895da4c984b05e03633bc';
+var selectedDevice = '04d27eb16e87e5cc918ccbfa292f96c161320514c4dcff14d096521a28f942e2';
 
 
 getSources();
@@ -202,7 +202,7 @@ function gotStream(stream) {
   localVideo.srcObject = stream;
   localStream = stream;
   // createPeerConnectionButton.click();
-  getMedia2();
+  // getMedia2();
 }
 
 var localVideoSender;
@@ -210,7 +210,7 @@ var localVideoSender;
 var name, connectedUser, connection;
 
 function loginAndConnect() {
-  connection = new WebSocket("ws://exrample.com:8080");
+  connection = new WebSocket("ws://127.0.0.1:8080");
   connection.onopen = function () {
     name = localEndpointInput.value;
     var loginObject = {
@@ -222,7 +222,7 @@ function loginAndConnect() {
   };
 
   connection.onmessage = function (message) {
-    // console.log("Got message", message.data);
+    console.log("Got message", JSON.parse(message.data));
     var data = JSON.parse(message.data);
     switch (data.type) {
       case "login":
@@ -287,22 +287,16 @@ function onJoinRoom(data) {
 }
 
 function onOffer(sdp, name) {
-  console.log("on offer from ", name, sdp);
+  console.log("on offer from ", name);
   var offer = {
     type: 'offer',
     sdp: sdp
   };
-  // localPeerConnection.setRemoteDescription(offer).then(
-  //   onSetSessionDescriptionSuccess,
-  //   onSetSessionDescriptionError
-  // );
   localPeerConnection.setRemoteDescription(offer, onSetSessionDescriptionSuccess, onSetSessionDescriptionError);
-
   offerSdpTextarea.value = sdp;
   offerSdpTextarea.disabled = true;
   createOfferButton.disabled = true;
   setOfferButton.disabled = true;
-  // createAnswerButton.click();
 }
 
 function onAnswer(sdp) {
@@ -311,10 +305,6 @@ function onAnswer(sdp) {
     type: 'answer',
     sdp: sdp
   };
-  // localPeerConnection.setRemoteDescription(answer).then(
-  //   onSetSessionDescriptionSuccess,
-  //   onSetSessionDescriptionError
-  // );
   localPeerConnection.setRemoteDescription(answer, onSetSessionDescriptionSuccess, onSetSessionDescriptionError);
   answerSdpTextarea.value = sdp;
   answerSdpTextarea.disabled = true;
@@ -325,11 +315,6 @@ function onAnswer(sdp) {
 function onCandidate(candidate) {
   console.log("on candidate ", candidate);
   if (candidate) {
-    // localPeerConnection.peerconnection.addIceCandidate(new RTCIceCandidate(candidate)).then(success=>{
-    //   onAddIceCandidateSuccess(success);
-    // }).catch(error=>{
-    //   onAddIceCandidateError(error);
-    // });
     localPeerConnection.addIceCandidate(candidate, onAddIceCandidateSuccess, onAddIceCandidateError);
   }
 }
@@ -370,27 +355,20 @@ function createPeerConnection() {
   }
 
   var servers = {
-    // sdpSemantics: "unified-plan",
-    sdpSemantics: "plan-b",
+    sdpSemantics: "unified-plan",
+    // sdpSemantics: "plan-b",
     iceServers: [{"urls": "stun:124.202.164.3"}]
   };
 
   localPeerConnection = new PeerConnectionAdapter(servers);
   trace('Created local peer connection object localPeerConnection', localPeerConnection);
   console.log('Created local peer connection object localPeerConnection', localPeerConnection);
-  // localPeerConnection.peerconnection.onicecandidate = function (e) {
-  //   var candidate = {
-  //     type: 'candidate',
-  //     sdp: e.candidate
-  //   };
-  //   doSend(candidate, true);
-  // };
   localPeerConnection.onicecandidate(candidateSdp=>{
     let candidate = {
       type: 'candidate',
       sdp: candidateSdp
     }
-    console.log('send candidate from A', candidate);
+    console.log('send candidate from B', candidate);
     doSend(candidate, true);
   });
   if (RTCPeerConnection.prototype.createDataChannel) {
@@ -435,11 +413,6 @@ function createPeerConnection() {
       trace('Adding Local Stream2 to peer connection');
     }
   }
-
-  if(localEndpointInput.value.indexOf('A') > -1){
-    // A create offer
-    // createOfferButton.click();
-  }
 }
 
 function onSetSessionDescriptionSuccess() {
@@ -459,12 +432,6 @@ function maybeAddLineBreakToEnd(sdp) {
 }
 
 function createOffer() {
-  // localPeerConnection.createOffer(
-  //   offerOptions
-  // ).then(
-  //   gotDescription1,
-  //   onCreateSessionDescriptionError
-  // );
   localPeerConnection.createOffer(
     gotDescription1,
     onCreateSessionDescriptionError,
@@ -485,16 +452,12 @@ function setOffer() {
     type: 'offer',
     sdp: sdp
   };
-  // localPeerConnection.setLocalDescription(offer).then(
-  //   onSetSessionDescriptionSuccess,
-  //   onSetSessionDescriptionError
-  // );
   localPeerConnection.setLocalDescription(
     offer,
     onSetSessionDescriptionSuccess,
     onSetSessionDescriptionError
   );
-  trace('Modified Offer from localPeerConnection \n' + sdp);
+  // trace('Modified Offer from localPeerConnection');
   doSend(offer, true);
   setOfferButton.disabled = true;
 }
@@ -503,14 +466,9 @@ function gotDescription1(description) {
   offerSdpTextarea.disabled = false;
   offerSdpTextarea.value = description.sdp;
   trace('on create offer success, \n', description.sdp);
-  // setOfferButton.click();
 }
 
 function createAnswer() {
-  // localPeerConnection.createAnswer().then(
-  //   gotDescription2,
-  //   onCreateSessionDescriptionError
-  // );
   localPeerConnection.createAnswer(
     gotDescription2,
     onCreateSessionDescriptionError,
@@ -527,16 +485,12 @@ function setAnswer() {
     type: 'answer',
     sdp: sdp
   };
-  // localPeerConnection.setLocalDescription(answer).then(
-  //   onSetSessionDescriptionSuccess,
-  //   onSetSessionDescriptionError
-  // );
   localPeerConnection.setLocalDescription(
     answer,
     onSetSessionDescriptionSuccess,
     onSetSessionDescriptionError
   );
-  trace('Modified Answer from remotePeerConnection \n' + sdp);
+  // trace('Modified Answer from remotePeerConnection \n' + sdp);
   doSend(answer, true);
   setAnswerButton.disabled = true;
 }
@@ -545,7 +499,6 @@ function gotDescription2(description) {
   answerSdpTextarea.disabled = false;
   answerSdpTextarea.value = description.sdp;
   trace('on create answer success: \n', description.sdp);
-  // setAnswerButton.click();
 }
 
 function sendData() {

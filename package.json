@@ -28,6 +28,7 @@
     "xml-loader": "^1.2.1"
   },
   "dependencies": {
+    "npm": "^6.4.1",
     "sdp-interop": "^0.1.13"
   }
 }
