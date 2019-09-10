@@ -106,7 +106,7 @@ function gotSources(sourceInfos) {
       }
       videoSelect.appendChild(option);
     } else {
-      console.log('unknown', JSON.stringify(sourceInfos[i]));
+      // console.log('unknown', JSON.stringify(sourceInfos[i]));
     }
   }
   getMediaButton.click();
@@ -194,7 +194,7 @@ function gotStream2(stream) {
   trace('Received local stream');
   localVideo2.srcObject = stream;
   localStream2 = stream;
-  // createPeerConnectionButton.click();
+  createPeerConnectionButton.click();
 }
 
 function gotStream(stream) {
@@ -202,7 +202,7 @@ function gotStream(stream) {
   localVideo.srcObject = stream;
   localStream = stream;
   // createPeerConnectionButton.click();
-  // getMedia2();
+  getMedia2();
 }
 
 var localVideoSender;

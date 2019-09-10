@@ -22,7 +22,7 @@ function PeerConnectionAdapter(ice_config, constraints) {
 
   this.peerconnection = new RTCPeerConnection(ice_config, constraints);
   try{
-    const Interop = require('sdp-interop').Interop;
+    const Interop = require('../../../sdp-interop/lib').Interop;
     this.interop = new Interop();
   }catch (e) {
     console.error(e);
